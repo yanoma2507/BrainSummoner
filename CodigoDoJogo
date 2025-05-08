@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Brain-Hot Invocador</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; }
+    button, input { margin: 5px; padding: 10px; font-size: 16px; }
+    #inventory, #statsBox, #shopBox, #specialPopup, #priceTable {
+      background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 15px;
+      margin: 20px auto; max-width: 500px; display: none; text-align: left;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    #loginScreen { background: #fff; border: 1px solid #ccc; max-width: 400px; margin: 50px auto; padding: 20px; border-radius: 10px; }
+    #gameScreen { display: none; }
+  </style>
+</head>
+<body>
+<div id="loginScreen">
+  <h2>Login / Registro</h2>
+  <input type="text" id="username" placeholder="Usuário"><br>
+  <input type="password" id="password" placeholder="Senha"><br>
+  <button onclick="register()">Registrar</button>
+  <button onclick="login()">Login</button>
+  <p id="loginMessage"></p>
+</div>
+
+<div id="gameScreen">
+  <h1>Brain-Hot Invocador</h1>
+  <p id="coins">Moedas: 0</p>
+  <p id="points">Pontos: 0</p>
+  <p id="level">Nível: 1 (0/10 XP)</p>
+  <p id="result">Nenhuma invocação ainda</p>
+  <button id="basicBtn" onclick="summon('Básica')">Invocação Básica</button>
+  <button onclick="summon('Melhorada')">Invocação Melhorada (50 moedas)</button>
+  <button onclick="summon('Hyper')">Hyper Invocação (300 moedas)</button>
+  <button onclick="showInventory()">Ver Inventário</button>
+  <button onclick="showStats()">Estatísticas</button>
+  <button onclick="showShop()">Loja</button>
+  <button onclick="logout()">Sair</button>
+
+  <div id="inventory"></div>
+  <button id="closeInventoryBtn" onclick="hideInventory()">Fechar Inventário</button>
+
+  <div id="priceTable">
+    <h3>Preços de Venda</h3>
+    <table>
+      <tr><th>Raridade</th><th>Valor</th></tr>
+      <tr><td>Comum</td><td>2</td></tr>
+      <tr><td>Raro</td><td>5</td></tr>
+      <tr><td>Épico</td><td>10</td></tr>
+      <tr><td>Lendário</td><td>20</td></tr>
+      <tr><td>Mítico</td><td>70</td></tr>
+      <tr><td>Divino</td><td>400</td></tr>
+      <tr><td>Secreto</td><td>800</td></tr>
+      <tr><td>Hot-brain</td><td>10000</td></tr>
+    </table>
+  </div>
+</div>
+
+<div id="specialPopup">
+  <h2>VOCÊ CONSEGUIU UM HOT-BRAIN!!!</h2>
+  <p>Incrível! Você invocou o lendário Hot-brain!</p>
+  <input type="text" id="customName" placeholder="Nomeie seu Hot-brain">
+  <button onclick="confirmCustomName()">Salvar Nome</button>
+</div>
+
+<div id="statsBox"></div>
+<div id="shopBox"></div>
+
+<script>
+let coins = 0, points = 0, inventory = {}, currentUser = null, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
+let autoSellCommon = false, autoSellRare = false, autoSellCommonActive = false, autoSellRareActive = false;
+let betterBasicCoins = false;
+let cheapImproved = false, improvedCost = 50, hyperCost = 300, hyperImproved = false; // Ajustes de custo
+let xp = 0, level = 1; // Sistema de níveis
+let stats = { basic: 0, melhorada: 0, hyper: 0, épico: 0, lendário: 0, mítico: 0, divino: 0, secreto: 0, hotbrain: 0 };
+
+const pointValues = { 'Básica': 1, 'Melhorada': 30, 'Hyper': 200, 'Épico': 24, 'Lendário': 56, 'Mítico': 167, 'Divino': 345, 'Hot-brain': 2978 };
+const brainhots = {
+  'Comum': ["zibra zibra zibrallini", "blueberrinni octopussinni", "il cacto hipopotamo", "burbaloni luliloli", "misericórdia", "glorbo fruttodrillo", "lerulerulerule", "noooooooo la polizia"],
+  'Raro': ["makakini bananini", "orangutini ananasini", "cocofanto elefanto", "bobrito bandito", "Ecco cavalo virtuoso", "bri bri bricus dicus de bicus", "Tung Tung Tung Tung Tung sahur", "brr brr patapim", "indo ali"],
+  'Épico': ["bombombini gusini", "shimpanzini bananini", "boneca ambalabu", "bananitta dolphinitta", "trippi troppa trippa trippa", "frulli frulla", "frigo camelo"],
+  'Lendário': ["tralalelo tralala", "lirili larila", "cappuccino assassino", "trulimero trulicina"],
+  'Mítico': ["bombardiro crocodilo", "balerinna cappucinna", "la vaca Saturno saturnita"],
+  'Divino': ["giraffa celeste", "sharkarino tapuccino"],
+  'Secreto': ["tripa tropa tralala lirilira Tung Tung sahur boneka Tung Tung tralalelo tripo tropa crocodina"],
+  'Hot-brain': [""]
+};
+const rarityChances = { 'Básica': {'Comum': 80, 'Raro': 14, 'Épico': 4, 'Lendário': 1.3, 'Mítico': 0.5, 'Divino': 0.15, 'Secreto': 0.0499, 'Hot-brain': 0.0001}, 'Melhorada': {'Raro': 60, 'Épico': 20, 'Lendário': 10, 'Mítico': 5, 'Divino': 2, 'Secreto': 0.9992, 'Hot-brain': 0.0008}, 'Hyper': {'Lendário': 77, 'Mítico': 10, 'Divino': 3, 'Secreto': 0.9977, 'Hot-brain': 0.0023} };
+const sellPrices = { 'Comum': 2, 'Raro': 5, 'Épico': 10, 'Lendário': 20, 'Mítico': 70, 'Divino': 400, 'Secreto': 800, 'Hot-brain': 10000 };
+
+function showMessage(msg) { document.getElementById("loginMessage").innerText = msg; }
+function register() { 
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  if (!username || !password) return showMessage("Preencha todos os campos!");
+  if (localStorage.getItem(`brainhot_pass_${username}`)) return showMessage("Usuário já existe!");
+  localStorage.setItem(`brainhot_pass_${username}`, password);
+  showMessage("Registrado com sucesso!");
+}
+function login() { 
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  if (!username || !password) return showMessage("Preencha todos os campos!");
+  const storedPassword = localStorage.getItem(`brainhot_pass_${username}`);
+  if (!storedPassword || storedPassword !== password) return showMessage("Usuário ou senha incorretos!");
+  currentUser = username;
+  loadData();
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "block";
+  updateUI();
+}
+function logout() { 
+  saveData();
+  currentUser = null;
+  document.getElementById("loginScreen").style.display = "block";
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("loginMessage").innerText = "";
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+}
+function saveData() { 
+  if (currentUser) localStorage.setItem(`brainhot_user_${currentUser}`, JSON.stringify({ coins, points, inventory, stats, summonDelay, upgradeLevel, autoSellCommon, autoSellRare, autoSellCommonActive, autoSellRareActive, betterBasicCoins, cheapImproved, hyperImproved, improvedCost, hyperCost, xp, level }));
+}
+function loadData() { 
+  const data = localStorage.getItem(`brainhot_user_${currentUser}`);
+  if (data) {
+    const parsedData = JSON.parse(data);
+    coins = parsedData.coins || 0;
+    points = parsedData.points || 0;
+    inventory = parsedData.inventory || {};
+    stats = parsedData.stats || { basic: 0, melhorada: 0, hyper: 0, épico: 0, lendário: 0, mítico: 0, divino: 0, secreto: 0, hotbrain: 0 };
+    summonDelay = parsedData.summonDelay || 500;
+    upgradeLevel = parsedData.upgradeLevel || 0;
+    autoSellCommon = parsedData.autoSellCommon || false;
+    autoSellRare = parsedData.autoSellRare || false;
+    autoSellCommonActive = parsedData.autoSellCommonActive || false;
+    autoSellRareActive = parsedData.autoSellRareActive || false;
+    betterBasicCoins = parsedData.betterBasicCoins || false;
+    cheapImproved = parsedData.cheapImproved || false;
+    hyperImproved = parsedData.hyperImproved || false;
+    improvedCost = parsedData.improvedCost || 50;
+    hyperCost = parsedData.hyperCost || 300;
+    xp = parsedData.xp || 0;
+    level = parsedData.level || 1;
+  }
+  updateUI();
+}
+function updateUI() { 
+  document.getElementById("coins").innerText = `Moedas: ${coins}`;
+  document.getElementById("points").innerText = `Pontos: ${points}`;
+  document.getElementById("level").innerText = `Nível: ${level} (${xp}/${getXpForNextLevel()})`;
+}
+
+function summon(tipo) { 
+  const costs = { 'Básica': 0, 'Melhorada': improvedCost, 'Hyper': hyperCost };
+  if (coins < costs[tipo]) return alert("Moedas insuficientes!");
+  if (tipo === 'Básica') { 
+    document.getElementById("basicBtn").disabled = true;
+    document.getElementById("result").innerText = "Invocando...";
+    setTimeout(() => { executeSummon(tipo); document.getElementById("basicBtn").disabled = false; }, summonDelay);
+  } else { 
+    executeSummon(tipo);
+  }
+}
+function getRandomRarity(tipo) { 
+  const roll = Math.random() * 100;
+  return Object.keys(rarityChances[tipo]).find(r => roll <= Object.values(rarityChances[tipo]).slice(0, Object.keys(rarityChances[tipo]).indexOf(r) + 1).reduce((a, b) => a + b)) || 'Comum';
+}
+function executeSummon(tipo) { 
+  const costs = { 'Básica': 0, 'Melhorada': improvedCost, 'Hyper': hyperCost };
+  if (costs[tipo]) coins -= costs[tipo];
+  else coins += (betterBasicCoins ? Math.floor(Math.random() * 8) + 3 : Math.floor(Math.random() * 5) + 1) + getLevelCoinBonus();
+  xp++;
+  checkLevelUp();
+  const raridade = getRandomRarity(tipo);
+  const nome = brainhots[raridade][Math.floor(Math.random() * brainhots[raridade].length)];
+  stats[tipo.toLowerCase()] = (stats[tipo.toLowerCase()] || 0) + 1;
+  stats[raridade.toLowerCase()] = (stats[raridade.toLowerCase()] || 0) + 1;
+  points += (pointValues[tipo] || 0) + (pointValues[raridade] || 0);
+  updateUI();
+  if (raridade === 'Hot-brain') { 
+    pendingHotBrain = { nome, raridade };
+    document.getElementById("specialPopup").style.display = "block";
+    return;
+  }
+  addToInventory(nome, raridade);
+}
+function confirmCustomName() { 
+  const customName = document.getElementById("customName").value.trim();
+  if (!customName) return;
+  addToInventory(`${pendingHotBrain.nome} (${customName})`, pendingHotBrain.raridade);
+  document.getElementById("specialPopup").style.display = "none";
+  document.getElementById("customName").value = "";
+}
+function addToInventory(nome, raridade) { 
+  if ((raridade === 'Comum' && autoSellCommon && autoSellCommonActive) || (raridade === 'Raro' && autoSellRare && autoSellRareActive)) {
+    if (raridade === 'Hot-brain' && !confirm(`Vender Hot-brain "${nome}" por ${sellPrices[raridade]} moedas?`)) return;
+    coins += sellPrices[raridade];
+    document.getElementById("result").innerText = `Você invocou: ${nome} (${raridade}) - Vendido por ${sellPrices[raridade]} moedas`;
+    updateUI();
+    saveData();
+    return;
+  }
+  if (!inventory[nome]) inventory[nome] = { count: 0, rarity: raridade };
+  inventory[nome].count++;
+  document.getElementById("result").innerText = `Você invocou: ${nome} (${raridade})`;
+  updateUI();
+  saveData();
+}
+function showInventory() { 
+  document.getElementById("inventory").innerHTML = `<h3>Inventário</h3>${Object.entries(inventory).map(([n, i]) => `${n} (${i.rarity}) - ${i.count}x <button onclick="sell('${n}')">Vender</button>`).join('<br>')}`;
+  document.getElementById("inventory").style.display = "block";
+  document.getElementById("priceTable").style.display = "block";
+}
+function hideInventory() { 
+  document.getElementById("inventory").style.display = "none";
+  document.getElementById("priceTable").style.display = "none";
+}
+function sell(n) { 
+  const item = inventory[n];
+  if (!item || item.count <= 0) return;
+  if (item.rarity === "Hot-brain" && !confirm(`Vender Hot-brain "${n}" por ${sellPrices[item.rarity]} moedas?`)) return;
+  coins += sellPrices[item.rarity];
+  item.count--;
+  if (item.count === 0) delete inventory[n];
+  showInventory();
+  saveData();
+}
+function showStats() { 
+  document.getElementById("statsBox").innerHTML = `<h3>Estatísticas</h3>Básica: ${stats.basic} | Melhorada: ${stats.melhorada} | Hyper: ${stats.hyper}<br>Épicos: ${stats.épico}, Lendários: ${stats.lendário}, Míticos: ${stats.mítico}, Divinos: ${stats.divino}, Secretos: ${stats.secreto}, Hot-brain: ${stats.hotbrain}<br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  document.getElementById("statsBox").style.display = "block";
+}
+function showShop() { 
+  let html = `<h3>Loja</h3>`;
+  if (upgradeLevel < 2) html += `<button onclick="buyUpgrade(${upgradeLevel + 1})">Melhorar Básica para ${[300, 100][upgradeLevel]}ms (${[1500, 3000][upgradeLevel]} moedas)</button><br>`;
+  else html += `<p>Velocidade máxima!</p>`;
+  if (!autoSellCommon) html += `<button onclick="buyAutoSell('common')">Auto-Sell Comuns (700 moedas)</button><br>`;
+  else html += `<button onclick="toggleAutoSell('common')">${autoSellCommonActive ? 'Desativar' : 'Ativar'} Auto-Sell Comuns</button><br>`;
+  if (autoSellCommon && !autoSellRare) html += `<button onclick="buyAutoSell('rare')">Auto-Sell Raros (1000 moedas)</button><br>`;
+  else if (autoSellRare) html += `<button onclick="toggleAutoSell('rare')">${autoSellRareActive ? 'Desativar' : 'Ativar'} Auto-Sell Raros</button><br>`;
+  if (!betterBasicCoins) html += `<button onclick="buyBetterBasicCoins()">Mais Moedas Básicas (2000 moedas)</button><br>`;
+  if (!cheapImproved) html += `<button onclick="buyCheapImproved()">Invocação Melhorada Barata (2000 moedas)</button><br>`;
+  else if (cheapImproved && !hyperImproved) html += `<button onclick="buyHyperImproved()">Hyper Invocação Melhorada (4000 moedas)</button><br>`;
+  html += `<button onclick="resetGame()">Resetar Jogo</button><br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  document.getElementById("shopBox").innerHTML = html;
+  document.getElementById("shopBox").style.display = "block";
+}
+function buyUpgrade(level) { 
+  if (coins >= [1500, 3000][level - 1]) {
+    coins -= [1500, 3000][level - 1];
+    summonDelay = [300, 100][level - 1];
+    upgradeLevel = level;
+  } else alert("Moedas insuficientes!");
+  updateUI();
+  saveData();
+  showShop();
+}
+function buyAutoSell(type) { 
+  if ((type === 'common' && coins >= 700) || (type === 'rare' && coins >= 1000)) {
+    coins -= type === 'common' ? 700 : 1000;
+    this[`autoSell${type.charAt(0).toUpperCase() + type.slice(1)}`] = true;
+  } else alert("Moedas insuficientes!");
+  updateUI();
+  saveData();
+  showShop();
+}
+function toggleAutoSell(type) { 
+  this[`autoSell${type.charAt(0).toUpperCase() + type.slice(1)}Active`] = !this[`autoSell${type.charAt(0).toUpperCase() + type.slice(1)}Active`];
+  saveData();
+  showShop();
+}
+function buyBetterBasicCoins() { 
+  if (coins >= 2000) {
+    coins -= 2000;
+    betterBasicCoins = true;
+  } else alert("Moedas insuficientes!");
+  updateUI();
+  saveData();
+  showShop();
+}
+function buyCheapImproved() { 
+  if (coins >= 2000) {
+    coins -= 2000;
+    cheapImproved = true;
+    improvedCost = 30;
+  } else alert("Moedas insuficientes!");
+  updateUI();
+  saveData();
+  showShop();
+}
+function buyHyperImproved() { 
+  if (coins >= 4000 && cheapImproved) {
+    coins -= 4000;
+    hyperImproved = true;
+    improvedCost = 10;
+    hyperCost = 230;
+  } else alert("Moedas insuficientes ou requisito não cumprido!");
+  updateUI();
+  saveData();
+  showShop();
+}
+function getXpForNextLevel() { 
+  return (level * (level + 1)) / 2 * 10; // Progressão de XP (ex.: nível 2 = 10, nível 3 = 25, até ~5050 no nível 100)
+}
+function checkLevelUp() { 
+  const nextLevelXp = getXpForNextLevel();
+  if (xp >= nextLevelXp) {
+    level++;
+    xp -= nextLevelXp;
+    alert(`Parabéns! Subiu para Nível ${level}!`);
+  }
+  updateUI();
+}
+function getLevelCoinBonus() { 
+  if (level >= 100) return Math.floor(Math.random() * 21) + 100; // 100-120 moedas
+  if (level >= 51) return Math.floor(Math.random() * 81) + 20; // 20-100 moedas
+  if (level >= 11) return Math.floor(Math.random() * 16) + 5; // 5-20 moedas
+  return Math.floor(Math.random() * 5) + 1; // 1-5 moedas (nível 1-10)
+}
+function resetGame() { 
+  if (prompt("Senha para resetar:") === localStorage.getItem(`brainhot_pass_${currentUser}`)) {
+    coins = 0;
+    points = 0;
+    inventory = {};
+    stats = { basic: 0, melhorada: 0, hyper: 0, épico: 0, lendário: 0, mítico: 0, divino: 0, secreto: 0, hotbrain: 0 };
+    summonDelay = 500;
+    upgradeLevel = 0;
+    autoSellCommon = false;
+    autoSellRare = false;
+    autoSellCommonActive = false;
+    autoSellRareActive = false;
+    betterBasicCoins = false;
+    cheapImproved = false;
+    hyperImproved = false;
+    improvedCost = 50;
+    hyperCost = 300;
+    xp = 0;
+    level = 1;
+    updateUI();
+    saveData();
+    alert("Jogo resetado!");
+    showShop();
+  } else alert("Senha incorreta!");
+}
+</script>
+</body>
+</html>
