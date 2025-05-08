@@ -12,20 +12,10 @@
     }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    #loginScreen { background: #fff; border: 1px solid #ccc; max-width: 400px; margin: 50px auto; padding: 20px; border-radius: 10px; }
-    #gameScreen { display: none; }
+    #gameScreen { display: block; } /* Tela principal visível por padrão */
   </style>
 </head>
 <body>
-<div id="loginScreen">
-  <h2>Login / Registro</h2>
-  <input type="text" id="username" placeholder="Usuário"><br>
-  <input type="password" id="password" placeholder="Senha"><br>
-  <button onclick="register()">Registrar</button>
-  <button onclick="login()">Login</button>
-  <p id="loginMessage"></p>
-</div>
-
 <div id="gameScreen">
   <h1>Brain-Hot Invocador</h1>
   <p id="coins">Moedas: 0</p>
@@ -38,7 +28,6 @@
   <button onclick="showInventory()">Ver Inventário</button>
   <button onclick="show()">Estatísticas</button>
   <button onclick="showShop()">Loja</button>
-  <button onclick="logout()">Sair</button>
 
   <div id="inventory"></div>
   <button id="closeInventoryBtn" onclick="hideInventory()">Fechar Inventário</button>
@@ -70,7 +59,7 @@
 <div id="shopBox"></div>
 
 <script>
-let coins = 300, points = 0, inventory = {}, currentUser = null, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
+let coins = 300, points = 0, inventory = {}, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
 let autoSellCommon = false, autoSellRare = false, autoSellCommonActive = false, autoSellRareActive = false;
 let betterBasicCoins = false;
 let cheapImproved = false, improvedCost = 50, hyperCost = 300, hyperImproved = false;
@@ -91,41 +80,11 @@ const brainhots = {
 const rarityChances = { 'Básica': {'Comum': 80, 'Raro': 14, 'Épico': 4, 'Lendário': 1.3, 'Mítico': 0.5, 'Divino': 0.15, 'Secreto': 0.0499, 'Hot-brain': 0.0001}, 'Melhorada': {'Raro': 60, 'Épico': 20, 'Lendário': 10, 'Mítico': 5, 'Divino': 2, 'Secreto': 0.9992, 'Hot-brain': 0.0008}, 'Hyper': {'Lendário': 77, 'Mítico': 10, 'Divino': 3, 'Secreto': 0.9977, 'Hot-brain': 0.0023} };
 const sellPrices = { 'Comum': 2, 'Raro': 5, 'Épico': 10, 'Lendário': 20, 'Mítico': 70, 'Divino': 400, 'Secreto': 800, 'Hot-brain': 10000 };
 
-function showMessage(msg) { document.getElementById("loginMessage").innerText = msg; }
-function register() { 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-  if (!username || !password) return showMessage("Preencha todos os campos!");
-  if (localStorage.getItem(`brainhot_pass_${username}`)) return showMessage("Usuário já existe!");
-  localStorage.setItem(`brainhot_pass_${username}`, password);
-  showMessage("Registrado com sucesso!");
-}
-function login() { 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-  if (!username || !password) return showMessage("Preencha todos os campos!");
-  const storedPassword = localStorage.getItem(`brainhot_pass_${username}`);
-  if (!storedPassword || storedPassword !== password) return showMessage("Usuário ou senha incorretos!");
-  currentUser = username;
-  loadData();
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("gameScreen").style.display = "block";
-  updateUI();
-}
-function logout() { 
-  saveData();
-  currentUser = null;
-  document.getElementById("loginScreen").style.display = "block";
-  document.getElementById("gameScreen").style.display = "none";
-  document.getElementById("loginMessage").innerText = "";
-  document.getElementById("username").value = "";
-  document.getElementById("password").value = "";
-}
 function saveData() { 
-  if (currentUser) localStorage.setItem(`brainhot_user_${currentUser}`, JSON.stringify({ coins, points, inventory, stats, summonDelay, upgradeLevel, autoSellCommon, autoSellRare, autoSellCommonActive, autoSellRareActive, betterBasicCoins, cheapImproved, hyperImproved, improvedCost, hyperCost, xp, level }));
+  localStorage.setItem(`brainhot_user_default`, JSON.stringify({ coins, points, inventory, stats, summonDelay, upgradeLevel, autoSellCommon, autoSellRare, autoSellCommonActive, autoSellRareActive, betterBasicCoins, cheapImproved, hyperImproved, improvedCost, hyperCost, xp, level }));
 }
 function loadData() { 
-  const data = localStorage.getItem(`brainhot_user_${currentUser}`);
+  const data = localStorage.getItem(`brainhot_user_default`);
   if (data) {
     const parsedData = JSON.parse(data);
     coins = parsedData.coins || 0;
@@ -263,8 +222,8 @@ function buyAutoSell(type) {
     coins -= type === 'common' ? 700 : 1000;
     autoSellCommon = type === 'common' ? true : autoSellCommon;
     autoSellRare = type === 'rare' ? true : autoSellRare;
-    autoSellCommonActive = type === 'common' ? true : autoSellCommonActive; // Ativa automaticamente
-    autoSellRareActive = type === 'rare' ? true : autoSellRareActive; // Ativa automaticamente
+    autoSellCommonActive = type === 'common' ? true : autoSellCommonActive;
+    autoSellRareActive = type === 'rare' ? true : autoSellRareActive;
   } else alert("Moedas insuficientes!");
   updateUI();
   saveData();
@@ -324,7 +283,7 @@ function getLevelCoinBonus() {
   return Math.floor(Math.random() * 5) + 1;
 }
 function resetGame() { 
-  if (prompt("Senha para resetar:") === localStorage.getItem(`brainhot_pass_${currentUser}`)) {
+  if (prompt("Digite a senha para resetar (padrão: 1234):") === "1234") {
     coins = 0;
     points = 0;
     inventory = {};
@@ -348,6 +307,9 @@ function resetGame() {
     showShop();
   } else alert("Senha incorreta!");
 }
+
+// Carrega os dados salvos ao iniciar o jogo
+loadData();
 </script>
 </body>
 </html>
