@@ -6,7 +6,7 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; }
     button, input { margin: 5px; padding: 10px; font-size: 16px; }
-    #inventory, #statsBox, #shopBox, #specialPopup, #priceTable {
+    #inventory, #Box, #shopBox, #specialPopup, #priceTable {
       background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 15px;
       margin: 20px auto; max-width: 500px; display: none; text-align: left;
     }
@@ -36,7 +36,7 @@
   <button onclick="summon('Melhorada')">Invocação Melhorada (50 moedas)</button>
   <button onclick="summon('Hyper')">Hyper Invocação (300 moedas)</button>
   <button onclick="showInventory()">Ver Inventário</button>
-  <button onclick="showStats()">Estatísticas</button>
+  <button onclick="show()">Estatísticas</button>
   <button onclick="showShop()">Loja</button>
   <button onclick="logout()">Sair</button>
 
@@ -66,15 +66,15 @@
   <button onclick="confirmCustomName()">Salvar Nome</button>
 </div>
 
-<div id="statsBox"></div>
+<div id="Box"></div>
 <div id="shopBox"></div>
 
 <script>
-let coins = 0, points = 0, inventory = {}, currentUser = null, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
+let coins = 300, points = 0, inventory = {}, currentUser = null, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
 let autoSellCommon = false, autoSellRare = false, autoSellCommonActive = false, autoSellRareActive = false;
 let betterBasicCoins = false;
-let cheapImproved = false, improvedCost = 50, hyperCost = 300, hyperImproved = false; // Ajustes de custo
-let xp = 0, level = 1; // Sistema de níveis
+let cheapImproved = false, improvedCost = 50, hyperCost = 300, hyperImproved = false;
+let xp = 0, level = 1;
 let stats = { basic: 0, melhorada: 0, hyper: 0, épico: 0, lendário: 0, mítico: 0, divino: 0, secreto: 0, hotbrain: 0 };
 
 const pointValues = { 'Básica': 1, 'Melhorada': 30, 'Hyper': 200, 'Épico': 24, 'Lendário': 56, 'Mítico': 167, 'Divino': 345, 'Hot-brain': 2978 };
@@ -229,9 +229,9 @@ function sell(n) {
   showInventory();
   saveData();
 }
-function showStats() { 
-  document.getElementById("statsBox").innerHTML = `<h3>Estatísticas</h3>Básica: ${stats.basic} | Melhorada: ${stats.melhorada} | Hyper: ${stats.hyper}<br>Épicos: ${stats.épico}, Lendários: ${stats.lendário}, Míticos: ${stats.mítico}, Divinos: ${stats.divino}, Secretos: ${stats.secreto}, Hot-brain: ${stats.hotbrain}<br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
-  document.getElementById("statsBox").style.display = "block";
+function show() { 
+  document.getElementById("Box").innerHTML = `<h3>Estatísticas</h3>Básica: ${stats.basic} | Melhorada: ${stats.melhorada} | Hyper: ${stats.hyper}<br>Épicos: ${stats.épico}, Lendários: ${stats.lendário}, Míticos: ${stats.mítico}, Divinos: ${stats.divino}, Secretos: ${stats.secreto}, Hot-brain: ${stats.hotbrain}<br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  document.getElementById("Box").style.display = "block";
 }
 function showShop() { 
   let html = `<h3>Loja</h3>`;
@@ -261,7 +261,10 @@ function buyUpgrade(level) {
 function buyAutoSell(type) { 
   if ((type === 'common' && coins >= 700) || (type === 'rare' && coins >= 1000)) {
     coins -= type === 'common' ? 700 : 1000;
-    this[`autoSell${type.charAt(0).toUpperCase() + type.slice(1)}`] = true;
+    autoSellCommon = type === 'common' ? true : autoSellCommon;
+    autoSellRare = type === 'rare' ? true : autoSellRare;
+    autoSellCommonActive = type === 'common' ? true : autoSellCommonActive; // Ativa automaticamente
+    autoSellRareActive = type === 'rare' ? true : autoSellRareActive; // Ativa automaticamente
   } else alert("Moedas insuficientes!");
   updateUI();
   saveData();
@@ -303,7 +306,7 @@ function buyHyperImproved() {
   showShop();
 }
 function getXpForNextLevel() { 
-  return (level * (level + 1)) / 2 * 10; // Progressão de XP (ex.: nível 2 = 10, nível 3 = 25, até ~5050 no nível 100)
+  return (level * (level + 1)) / 2 * 10;
 }
 function checkLevelUp() { 
   const nextLevelXp = getXpForNextLevel();
@@ -315,10 +318,10 @@ function checkLevelUp() {
   updateUI();
 }
 function getLevelCoinBonus() { 
-  if (level >= 100) return Math.floor(Math.random() * 21) + 100; // 100-120 moedas
-  if (level >= 51) return Math.floor(Math.random() * 81) + 20; // 20-100 moedas
-  if (level >= 11) return Math.floor(Math.random() * 16) + 5; // 5-20 moedas
-  return Math.floor(Math.random() * 5) + 1; // 1-5 moedas (nível 1-10)
+  if (level >= 100) return Math.floor(Math.random() * 21) + 100;
+  if (level >= 51) return Math.floor(Math.random() * 81) + 20;
+  if (level >= 11) return Math.floor(Math.random() * 16) + 5;
+  return Math.floor(Math.random() * 5) + 1;
 }
 function resetGame() { 
   if (prompt("Senha para resetar:") === localStorage.getItem(`brainhot_pass_${currentUser}`)) {
