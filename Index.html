@@ -38,19 +38,20 @@
       <tr><th>Raridade</th><th>Valor</th></tr>
       <tr><td>Comum</td><td>2</td></tr>
       <tr><td>Raro</td><td>5</td></tr>
-      <tr><td>Épico</td><td>10</td></tr>
-      <tr><td>Lendário</td><td>20</td></tr>
+      <tr><td>épico</td><td>10</td></tr>
+      <tr><td>lendário</td><td>20</td></tr>
       <tr><td>Mítico</td><td>70</td></tr>
       <tr><td>Divino</td><td>400</td></tr>
       <tr><td>Secreto</td><td>800</td></tr>
       <tr><td>Hot-brain</td><td>10000</td></tr>
+      <tr><td>God-Brain</td><td>10000000</td></tr>
     </table>
   </div>
 </div>
 
 <div id="specialPopup">
   <h2>VOCÊ CONSEGUIU UM HOT-BRAIN!!!</h2>
-  <p>Incrível! Você invocou o lendário Hot-brain!</p>
+  <p>Incrível! Você invocou o  Hot-brain!</p>
   <input type="text" id="customName" placeholder="Nomeie seu Hot-brain">
   <button onclick="confirmCustomName()">Salvar Nome</button>
 </div>
@@ -59,29 +60,31 @@
 <div id="shopBox"></div>
 
 <script>
-let coins = 300, points = 0, inventory = {}, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
+let coins = 30000000000000, points = 0, inventory = {}, pendingHotBrain = null, summonDelay = 500, upgradeLevel = 0;
 let autoSellCommon = false, autoSellRare = false, autoSellCommonActive = false, autoSellRareActive = false;
 let betterBasicCoins = false;
 let cheapImproved = false, improvedCost = 50, hyperCost = 300, hyperImproved = false;
 let xp = 0, level = 1;
+let trioSummon = false; // Nova variável para o upgrade Trio Invocação
 let stats = { basic: 0, melhorada: 0, hyper: 0, épico: 0, lendário: 0, mítico: 0, divino: 0, secreto: 0, hotbrain: 0 };
 
-const pointValues = { 'Básica': 1, 'Melhorada': 30, 'Hyper': 200, 'Épico': 24, 'Lendário': 56, 'Mítico': 167, 'Divino': 345, 'Hot-brain': 2978 };
+const pointValues = { 'Básica': 1, 'Melhorada': 30, 'Hyper': 200, 'épico': 24, 'lendário': 56, 'Mítico': 167, 'Divino': 345, 'Hot-brain': 2978, 'God-Brain': 200000 };
 const brainhots = {
   'Comum': ["zibra zibra zibrallini", "blueberrinni octopussinni", "il cacto hipopotamo", "burbaloni luliloli", "misericórdia", "glorbo fruttodrillo", "lerulerulerule", "noooooooo la polizia"],
   'Raro': ["makakini bananini", "orangutini ananasini", "cocofanto elefanto", "bobrito bandito", "Ecco cavalo virtuoso", "bri bri bricus dicus de bicus", "Tung Tung Tung Tung Tung sahur", "brr brr patapim", "indo ali"],
-  'Épico': ["bombombini gusini", "shimpanzini bananini", "boneca ambalabu", "bananitta dolphinitta", "trippi troppa trippa trippa", "frulli frulla", "frigo camelo"],
-  'Lendário': ["tralalelo tralala", "lirili larila", "cappuccino assassino", "trulimero trulicina"],
+  'épico': ["bombombini gusini", "shimpanzini bananini", "boneca ambalabu", "bananitta dolphinitta", "trippi troppa trippa trippa", "frulli frulla", "frigo camelo"],
+  'lendário': ["tralalelo tralala", "lirili larila", "cappuccino assassino", "trulimero trulicina"],
   'Mítico': ["bombardiro crocodilo", "balerinna cappucinna", "la vaca Saturno saturnita"],
   'Divino': ["giraffa celeste", "sharkarino tapuccino"],
   'Secreto': ["tripa tropa tralala lirilira Tung Tung sahur boneka Tung Tung tralalelo tripo tropa crocodina"],
-  'Hot-brain': [""]
+  'Hot-brain': [""],
+  'God-Brain': ["Porco-Dio & Porco-Ala"]
 };
-const rarityChances = { 'Básica': {'Comum': 80, 'Raro': 14, 'Épico': 4, 'Lendário': 1.3, 'Mítico': 0.5, 'Divino': 0.15, 'Secreto': 0.0499, 'Hot-brain': 0.0001}, 'Melhorada': {'Raro': 60, 'Épico': 20, 'Lendário': 10, 'Mítico': 5, 'Divino': 2, 'Secreto': 0.9992, 'Hot-brain': 0.0008}, 'Hyper': {'Lendário': 77, 'Mítico': 10, 'Divino': 3, 'Secreto': 0.9977, 'Hot-brain': 0.0023} };
-const sellPrices = { 'Comum': 2, 'Raro': 5, 'Épico': 10, 'Lendário': 20, 'Mítico': 70, 'Divino': 400, 'Secreto': 800, 'Hot-brain': 10000 };
+const rarityChances = { 'Básica': {'Comum': 80, 'Raro': 14, 'épico': 4, 'lendário': 1.3, 'Mítico': 0.5, 'Divino': 0.15, 'Secreto': 0.0499, 'Hot-brain': 0.00019999999999999999, 'God-Brain': 0.00000000000000000001}, 'Melhorada': {'Raro': 60, 'épico': 20, 'lendário': 10, 'Mítico': 5, 'Divino': 2, 'Secreto': 0.9992, 'Hot-brain': 0.00079999999999999999, 'God-Brain': 0.00000000000000000001}, 'Hyper': {'lendário': 77, 'Mítico': 10, 'Divino': 3, 'Secreto': 0.9977, 'Hot-brain': 0.002299, 'God-Brain': 0.0000001} };
+const sellPrices = { 'Comum': 2, 'Raro': 5, 'épico': 10, 'lendário': 20, 'Mítico': 70, 'Divino': 400, 'Secreto': 800, 'Hot-brain': 10000, 'God-Brain': 10000000 };
 
 function saveData() { 
-  localStorage.setItem(`brainhot_user_default`, JSON.stringify({ coins, points, inventory, stats, summonDelay, upgradeLevel, autoSellCommon, autoSellRare, autoSellCommonActive, autoSellRareActive, betterBasicCoins, cheapImproved, hyperImproved, improvedCost, hyperCost, xp, level }));
+  localStorage.setItem(`brainhot_user_default`, JSON.stringify({ coins, points, inventory, stats, summonDelay, upgradeLevel, autoSellCommon, autoSellRare, autoSellCommonActive, autoSellRareActive, betterBasicCoins, cheapImproved, hyperImproved, improvedCost, hyperCost, xp, level, trioSummon }));
 }
 function loadData() { 
   const data = localStorage.getItem(`brainhot_user_default`);
@@ -104,6 +107,7 @@ function loadData() {
     hyperCost = parsedData.hyperCost || 300;
     xp = parsedData.xp || 0;
     level = parsedData.level || 1;
+    trioSummon = parsedData.trioSummon || false;
   }
   updateUI();
 }
@@ -146,6 +150,11 @@ function executeSummon(tipo) {
     return;
   }
   addToInventory(nome, raridade);
+  // Trio Invocação: 10% de chance de invocar mais 2 vezes
+  if (trioSummon && Math.random() < 0.1) {
+    executeSummon(tipo);
+    executeSummon(tipo);
+  }
 }
 function confirmCustomName() { 
   const customName = document.getElementById("customName").value.trim();
@@ -181,7 +190,7 @@ function hideInventory() {
 function sell(n) { 
   const item = inventory[n];
   if (!item || item.count <= 0) return;
-  if (item.rarity === "Hot-brain" && !confirm(`Vender Hot-brain "${n}" por ${sellPrices[item.rarity]} moedas?`)) return;
+  if (["Hot-brain", "God-Brain", "Divino", "Secreto"].includes(item.rarity) && !confirm(`Vender ${item.rarity} "${n}" por ${sellPrices[item.rarity]} moedas?`)) return;
   coins += sellPrices[item.rarity];
   item.count--;
   if (item.count === 0) delete inventory[n];
@@ -189,7 +198,7 @@ function sell(n) {
   saveData();
 }
 function show() { 
-  document.getElementById("Box").innerHTML = `<h3>Estatísticas</h3>Básica: ${stats.basic} | Melhorada: ${stats.melhorada} | Hyper: ${stats.hyper}<br>Épicos: ${stats.épico}, Lendários: ${stats.lendário}, Míticos: ${stats.mítico}, Divinos: ${stats.divino}, Secretos: ${stats.secreto}, Hot-brain: ${stats.hotbrain}<br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  document.getElementById("Box").innerHTML = `<h3>Estatísticas</h3>Melhorada: ${stats.melhorada} | Hyper: ${stats.hyper}<br>épicos: ${stats.épico}, lendários: ${stats.lendário}, Míticos: ${stats.mítico}, Divinos: ${stats.divino}, Secretos: ${stats.secreto}<br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
   document.getElementById("Box").style.display = "block";
 }
 function showShop() { 
@@ -203,6 +212,7 @@ function showShop() {
   if (!betterBasicCoins) html += `<button onclick="buyBetterBasicCoins()">Mais Moedas Básicas (2000 moedas)</button><br>`;
   if (!cheapImproved) html += `<button onclick="buyCheapImproved()">Invocação Melhorada Barata (2000 moedas)</button><br>`;
   else if (cheapImproved && !hyperImproved) html += `<button onclick="buyHyperImproved()">Hyper Invocação Melhorada (4000 moedas)</button><br>`;
+  if (!trioSummon) html += `<button onclick="buyTrioSummon()">Trio Invocação (500000 moedas)</button><br>`;
   html += `<button onclick="resetGame()">Resetar Jogo</button><br><button onclick="this.parentElement.style.display='none'">Fechar</button>`;
   document.getElementById("shopBox").innerHTML = html;
   document.getElementById("shopBox").style.display = "block";
@@ -264,6 +274,15 @@ function buyHyperImproved() {
   saveData();
   showShop();
 }
+function buyTrioSummon() { 
+  if (coins >= 500000) {
+    coins -= 500000;
+    trioSummon = true;
+  } else alert("Moedas insuficientes!");
+  updateUI();
+  saveData();
+  showShop();
+}
 function getXpForNextLevel() { 
   return (level * (level + 1)) / 2 * 10;
 }
@@ -301,6 +320,7 @@ function resetGame() {
     hyperCost = 300;
     xp = 0;
     level = 1;
+    trioSummon = false;
     updateUI();
     saveData();
     alert("Jogo resetado!");
